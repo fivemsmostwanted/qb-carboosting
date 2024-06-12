@@ -7,11 +7,13 @@ local searchBlip = nil
 local searchZoneBlip = nil
 local spawnedCar = nil
 local inTargetCar = false
-local trackerActive = true
+local trackerActive = false
 local dispatchSent = false
 local dispatchBlip = nil
 local currentMinigameIndex = 1
 local minigames = {}
+local cooldown = false
+local cooldownEndTime = 0
 
 -- Load the model and spawn the ped
 Citizen.CreateThread(function()
@@ -32,7 +34,11 @@ Citizen.CreateThread(function()
             {
                 type = "client",
                 action = function(entity)
-                    TriggerEvent('qb-carboosting:client:startBoosting')
+                    if cooldown then
+                        TriggerEvent('qb-carboosting:client:suspiciousActivity')
+                    else
+                        TriggerEvent('qb-carboosting:client:startBoostingRequest')
+                    end
                 end,
                 icon = "fas fa-car",
                 label = 'Vehicle Order',
@@ -87,6 +93,53 @@ function IsVehicleNearPed(location, radius)
     return false
 end
 
+function JobEmail(msg)
+    local phoneNr = 'Car Thief'
+    PlaySoundFrontend(-1, "Menu_Accept", "Phone_SoundSet_Default", true)
+    TriggerServerEvent('qb-phone:server:sendNewMail', {
+        sender = phoneNr,
+        subject = "Details",
+        message = msg,
+        button = {
+            enabled = true,
+            buttonEvent = 'qb-carboosting:client:acceptBoostingMission'
+        }
+    })
+end
+
+function LayLowEmail(msg)
+    local phoneNr = 'Car Thief'
+    PlaySoundFrontend(-1, "Menu_Accept", "Phone_SoundSet_Default", true)
+    TriggerServerEvent('qb-phone:server:sendNewMail', {
+        sender = phoneNr,
+        subject = "Lay Low",
+        message = msg,
+        button = {
+            enabled = false
+        }
+    })
+end
+
+-- Event to request boosting
+RegisterNetEvent('qb-carboosting:client:startBoostingRequest', function()
+    if not boosting then
+        QBCore.Functions.Notify("You have received a new vehicle order. Check your phone to accept or decline.")
+        JobEmail('Yo,<br /><br />You have a new vehicle order. Please accept or decline the request on your phone.<br />')
+    else
+        QBCore.Functions.Notify("You are already on a boosting mission.")
+    end
+end)
+
+-- Event to accept boosting mission
+RegisterNetEvent('qb-carboosting:client:acceptBoostingMission', function()
+    TriggerEvent('qb-carboosting:client:startBoosting')
+end)
+
+-- Event to decline boosting mission
+RegisterNetEvent('qb-carboosting:client:declineBoostingMission', function()
+    QBCore.Functions.Notify("You have declined the vehicle order.")
+end)
+
 -- Event to start boosting
 RegisterNetEvent('qb-carboosting:client:startBoosting', function()
     if not boosting then
@@ -95,11 +148,12 @@ RegisterNetEvent('qb-carboosting:client:startBoosting', function()
         targetCar = carList[math.random(#carList)]
         currentTier = randomTier
 
-        -- Define a random location for the target car
+        -- Select a random spawn location
+        local spawnLocation = Config.SpawnLocations[math.random(#Config.SpawnLocations)]
         carLocation = {
-            x = Config.PedLocation.x + math.random(-Config.CarSearchRadius, Config.CarSearchRadius),
-            y = Config.PedLocation.y + math.random(-Config.CarSearchRadius, Config.CarSearchRadius),
-            z = Config.PedLocation.z
+            x = spawnLocation.x,
+            y = spawnLocation.y,
+            z = spawnLocation.z
         }
 
         -- Add a search area blip
@@ -130,6 +184,7 @@ RegisterNetEvent('qb-carboosting:client:startBoosting', function()
         SetVehicleDoorsLocked(spawnedCar, 2) -- Locked
 
         boosting = true
+        trackerActive = true
         dispatchSent = false
         QBCore.Functions.Notify("Boost a " .. targetCar .. ". Search the area and deliver it to the drop-off point. Remove the tracker as soon as possible!")
         print("Boosting started with tier:", currentTier)
@@ -144,12 +199,12 @@ RegisterNetEvent('qb-carboosting:client:stopBoosting', function()
         boosting = false
         targetCar = nil
         currentTier = nil
+        trackerActive = false
         if searchBlip then RemoveBlip(searchBlip) end
         if searchZoneBlip then RemoveBlip(searchZoneBlip) end
         if spawnedCar then DeleteVehicle(spawnedCar) end
         if dispatchBlip then RemoveBlip(dispatchBlip) end
         inTargetCar = false
-        trackerActive = false
         QBCore.Functions.Notify("Boosting mission canceled.")
     else
         QBCore.Functions.Notify("You are not on a boosting mission.")
@@ -159,15 +214,28 @@ end)
 -- Event to complete the order
 RegisterNetEvent('qb-carboosting:client:completeOrder', function()
     if boosting and not inTargetCar and IsVehicleNearPed(Config.DropOffLocation, 10.0) then
+        if currentTier < 3 and trackerActive then
+            QBCore.Functions.Notify("You trying to get the feds on me? Get the tracker off that thing and come back.", 'error')
+            return
+        end
+
         QBCore.Functions.Notify("Car delivered successfully!")
         print("Delivering car with tier:", currentTier)
-        TriggerServerEvent('qb-carboosting:server:carDelivered', currentTier)
+        TriggerServerEvent('qb-carboosting:server:carDelivered', currentTier, trackerActive)
         boosting = false
         targetCar = nil
         currentTier = nil
         trackerActive = false
         if spawnedCar then DeleteVehicle(spawnedCar) end
         if dispatchBlip then RemoveBlip(dispatchBlip) end
+
+        -- Start the cooldown
+        cooldown = true
+        cooldownEndTime = GetGameTimer() + (Config.Delay * 1000)
+        LayLowEmail('The cops are still looking for you. Lay low for ' .. Config.Delay .. ' seconds.')
+        Citizen.SetTimeout(Config.Delay * 1000, function()
+            cooldown = false
+        end)
     else
         QBCore.Functions.Notify("No car in the delivery zone or you are still in the car.", 'error')
     end
@@ -213,7 +281,7 @@ Citizen.CreateThread(function()
 end)
 
 function DrawDebugInfo()
-    local debugText = string.format("Boosting: %s\nIn Target Car: %s\nTracker Active: %s\nCurrent Tier: %s", tostring(boosting), tostring(inTargetCar), tostring(trackerActive), tostring(currentTier))
+    local debugText = string.format("Boosting: %s\nIn Target Car: %s\nTracker Active: %s\nCurrent Tier: %s\nCooldown: %s", tostring(boosting), tostring(inTargetCar), tostring(trackerActive), tostring(currentTier), tostring(cooldown))
     SetTextFont(0)
     SetTextProportional(1)
     SetTextScale(0.0, 0.5)
@@ -312,6 +380,11 @@ RegisterNetEvent('qb-carboosting:client:notifyTrackerRemoved', function(success)
     else
         QBCore.Functions.Notify("Failed to remove tracker!")
     end
+end)
+
+RegisterNetEvent('qb-carboosting:client:suspiciousActivity', function()
+    exports['ps-dispatch']:SuspiciousActivity()
+    QBCore.Functions.Notify("Didn't I tell you not to come back?", 'error')
 end)
 
 RegisterNetEvent('qb-carboosting:client:useHakKit', function()

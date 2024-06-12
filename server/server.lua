@@ -1,16 +1,33 @@
 local QBCore = exports['qb-core']:GetCoreObject()
 
-RegisterNetEvent('qb-carboosting:server:carDelivered', function(tier)
+RegisterNetEvent('qb-carboosting:server:carDelivered', function(tier, trackerActive)
     local src = source
-    print("Received car delivery event with tier:", tier)
+    print("Received car delivery event with tier:", tier, "trackerActive:", trackerActive)
     local Player = QBCore.Functions.GetPlayer(src)
     if Player then
         local rewards = Config.Rewards[tier]
         if rewards then
-            local reward = rewards[math.random(#rewards)]
-            Player.Functions.AddMoney('cash', reward)
-            print("Giving reward:", reward)
-            TriggerClientEvent('QBCore:Notify', src, "You received $" .. reward .. " for delivering the car!", 'success')
+            if tier == 3 then
+                local rewardMoney = rewards.money[math.random(#rewards.money)]
+                Player.Functions.AddMoney('cash', rewardMoney)
+                print("Giving reward money for Tier 3:", rewardMoney)
+                TriggerClientEvent('QBCore:Notify', src, "You received $" .. rewardMoney .. " for delivering the car!", 'success')
+            elseif tier == 1 or tier == 2 then
+                if not trackerActive then
+                    local rewardMoney = rewards.full.money[math.random(#rewards.full.money)]
+                    local rewardItem = rewards.full.items[math.random(#rewards.full.items)]
+                    Player.Functions.AddMoney('cash', rewardMoney)
+                    Player.Functions.AddItem(rewardItem, 1)
+                    print("Giving full reward money for Tier", tier, ":", rewardMoney)
+                    print("Giving reward item for Tier", tier, ":", rewardItem)
+                    TriggerClientEvent('QBCore:Notify', src, "You received $" .. rewardMoney .. " and a " .. rewardItem .. " for delivering the car!", 'success')
+                else
+                    local penaltyMoney = rewards.penalty.money[math.random(#rewards.penalty.money)]
+                    Player.Functions.AddMoney('cash', penaltyMoney)
+                    print("Giving penalty reward money for Tier", tier, ":", penaltyMoney)
+                    TriggerClientEvent('QBCore:Notify', src, "You received $" .. penaltyMoney .. " for delivering the car with the tracker!", 'warning')
+                end
+            end
         else
             print("No rewards found for tier:", tier)
         end
