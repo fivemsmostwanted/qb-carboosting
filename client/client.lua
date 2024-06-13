@@ -3,8 +3,10 @@ local boosting = false
 local targetCar = nil
 local currentTier = nil
 local carLocation = nil
+local dropOffLocation = nil
 local searchBlip = nil
 local searchZoneBlip = nil
+local dropOffBlip = nil
 local spawnedCar = nil
 local inTargetCar = false
 local trackerActive = false
@@ -14,8 +16,10 @@ local currentMinigameIndex = 1
 local minigames = {}
 local cooldown = false
 local cooldownEndTime = 0
+local dropOffPed = nil
+local dropOffEmailSent = false
+local notificationShown = false
 
--- Load the model and spawn the ped
 Citizen.CreateThread(function()
     local pedModel = GetHashKey(Config.PedModel)
 
@@ -56,18 +60,7 @@ Citizen.CreateThread(function()
                 canInteract = function()
                     return boosting
                 end
-            },
-            {
-                type = "client",
-                action = function()
-                    TriggerEvent('qb-carboosting:client:completeOrder')
-                end,
-                icon = "fas fa-check",
-                label = 'Complete Order',
-                canInteract = function()
-                    return boosting and not inTargetCar and IsVehicleNearPed(Config.DropOffLocation, 10.0)
-                end
-            },
+            }
         },
         distance = 2.5,
     })
@@ -93,7 +86,7 @@ function IsVehicleNearPed(location, radius)
     return false
 end
 
-function JobEmail(msg)
+function JobEmail(msg, event)
     local phoneNr = 'Car Thief'
     PlaySoundFrontend(-1, "Menu_Accept", "Phone_SoundSet_Default", true)
     TriggerServerEvent('qb-phone:server:sendNewMail', {
@@ -102,7 +95,7 @@ function JobEmail(msg)
         message = msg,
         button = {
             enabled = true,
-            buttonEvent = 'qb-carboosting:client:acceptBoostingMission'
+            buttonEvent = event
         }
     })
 end
@@ -124,7 +117,7 @@ end
 RegisterNetEvent('qb-carboosting:client:startBoostingRequest', function()
     if not boosting then
         QBCore.Functions.Notify("You have received a new vehicle order. Check your phone to accept or decline.")
-        JobEmail('Yo,<br /><br />You have a new vehicle order. Please accept or decline the request on your phone.<br />')
+        JobEmail('Yo,<br /><br />You have a new vehicle order. Please accept or decline the request on your phone.<br />', 'qb-carboosting:client:acceptBoostingMission')
     else
         QBCore.Functions.Notify("You are already on a boosting mission.")
     end
@@ -135,7 +128,7 @@ RegisterNetEvent('qb-carboosting:client:acceptBoostingMission', function()
     TriggerEvent('qb-carboosting:client:startBoosting')
 end)
 
--- Event to decline boosting mission
+-- Event to decline boosting mission --TODO Still not being used
 RegisterNetEvent('qb-carboosting:client:declineBoostingMission', function()
     QBCore.Functions.Notify("You have declined the vehicle order.")
 end)
@@ -186,6 +179,8 @@ RegisterNetEvent('qb-carboosting:client:startBoosting', function()
         boosting = true
         trackerActive = true
         dispatchSent = false
+        dropOffEmailSent = false
+        notificationShown = false
         QBCore.Functions.Notify("Boost a " .. targetCar .. ". Search the area and deliver it to the drop-off point. Remove the tracker as soon as possible!")
         print("Boosting started with tier:", currentTier)
     else
@@ -202,20 +197,64 @@ RegisterNetEvent('qb-carboosting:client:stopBoosting', function()
         trackerActive = false
         if searchBlip then RemoveBlip(searchBlip) end
         if searchZoneBlip then RemoveBlip(searchZoneBlip) end
+        if dropOffBlip then RemoveBlip(dropOffBlip) end
         if spawnedCar then DeleteVehicle(spawnedCar) end
+        if dropOffPed then DeleteEntity(dropOffPed) end
         if dispatchBlip then RemoveBlip(dispatchBlip) end
         inTargetCar = false
+        notificationShown = false
         QBCore.Functions.Notify("Boosting mission canceled.")
     else
         QBCore.Functions.Notify("You are not on a boosting mission.")
     end
 end)
 
+-- Event to accept drop-off location
+RegisterNetEvent('qb-carboosting:client:acceptDropOff', function()
+    SetNewWaypoint(dropOffLocation.x, dropOffLocation.y)
+    dropOffBlip = AddBlipForCoord(dropOffLocation.x, dropOffLocation.y, dropOffLocation.z)
+    SetBlipSprite(dropOffBlip, 225) -- Car
+    SetBlipColour(dropOffBlip, 1) -- Red
+    SetBlipScale(dropOffBlip, 1.0)
+    SetBlipAsShortRange(dropOffBlip, true)
+    BeginTextCommandSetBlipName("STRING")
+    AddTextComponentString("Drop-Off Location")
+    EndTextCommandSetBlipName(dropOffBlip)
+
+    local pedModel = GetHashKey(Config.PedModel)
+    RequestModel(pedModel)
+    while not HasModelLoaded(pedModel) do
+        Citizen.Wait(1)
+    end
+
+    dropOffPed = CreatePed(4, pedModel, dropOffLocation.x, dropOffLocation.y, dropOffLocation.z - 1.0, dropOffLocation.heading, false, true)
+    FreezeEntityPosition(dropOffPed, true)
+    SetEntityInvincible(dropOffPed, true)
+    SetBlockingOfNonTemporaryEvents(dropOffPed, true)
+
+    exports['qb-target']:AddTargetEntity(dropOffPed, {
+        options = {
+            {
+                type = "client",
+                action = function()
+                    TriggerEvent('qb-carboosting:client:completeOrder')
+                end,
+                icon = "fas fa-check",
+                label = 'Complete Delivery',
+                canInteract = function()
+                    return boosting and not inTargetCar and IsVehicleNearPed(dropOffLocation, 10.0)
+                end
+            },
+        },
+        distance = 2.5,
+    })
+end)
+
 -- Event to complete the order
 RegisterNetEvent('qb-carboosting:client:completeOrder', function()
-    if boosting and not inTargetCar and IsVehicleNearPed(Config.DropOffLocation, 10.0) then
+    if boosting and not inTargetCar and IsVehicleNearPed(dropOffLocation, 10.0) then
         if currentTier < 3 and trackerActive then
-            QBCore.Functions.Notify("You trying to get the feds on me? Get the tracker off that thing and come back.", 'error')
+            QBCore.Functions.Notify("You trying to put the cops on me bro? Get the tracker off that thing and come back.", 'error')
             return
         end
 
@@ -227,6 +266,8 @@ RegisterNetEvent('qb-carboosting:client:completeOrder', function()
         currentTier = nil
         trackerActive = false
         if spawnedCar then DeleteVehicle(spawnedCar) end
+        if dropOffBlip then RemoveBlip(dropOffBlip) end
+        if dropOffPed then DeleteEntity(dropOffPed) end
         if dispatchBlip then RemoveBlip(dispatchBlip) end
 
         -- Start the cooldown
@@ -250,11 +291,21 @@ Citizen.CreateThread(function()
 
             if IsPedInAnyVehicle(playerPed, false) then
                 local vehicle = GetVehiclePedIsIn(playerPed, false)
-                if GetDisplayNameFromVehicleModel(GetEntityModel(vehicle)) == targetCar then
+                local vehicleModel = GetDisplayNameFromVehicleModel(GetEntityModel(vehicle)):lower()
+                if vehicleModel == targetCar:lower() then
                     if not inTargetCar then
-                        QBCore.Functions.Notify("You have stolen the " .. targetCar .. "! Deliver it to the drop-off point. Remove the tracker as soon as possible!")
-                        SetNewWaypoint(Config.DropOffLocation.x, Config.DropOffLocation.y)
+                        if not notificationShown then
+                            QBCore.Functions.Notify("You have stolen the " .. targetCar .. "! Accept the drop-off location via your email.")
+                            notificationShown = true
+                        end
                         inTargetCar = true
+
+                        -- Select a random drop-off location
+                        if not dropOffEmailSent then
+                            dropOffLocation = Config.DropOffLocations[math.random(#Config.DropOffLocations)]
+                            JobEmail('Yo,<br /><br />Deliver the vehicle to the specified drop-off location. Accept the location on your phone.<br /><br />Location: ' .. dropOffLocation.label, 'qb-carboosting:client:acceptDropOff')
+                            dropOffEmailSent = true
+                        end
 
                         -- Trigger police dispatch once
                         if not dispatchSent then

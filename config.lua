@@ -1,23 +1,46 @@
 Config = {}
 
 -- Bools
-Config.Debug = false -- Debug this will increase the resource ms drastically.
+Config.Debug = false -- Debug this will increase the resource ms.
 
 -- 
 Config.PedModel = 'a_m_m_bevhills_02' -- ped to interact with
 Config.CarSearchRadius = 100.0 -- Radius on map
 Config.Delay = 600 -- Delay in seconds
 
+Config.CarTiers = {
+    [1] = {'adder', 'zentorno', 't20'},
+    [2] = {'dominator', 'gauntlet', 'f620'},
+    [3] = {'panto', 'blista', 'dilettante'}
+}
+
 -- Rewards
 Config.Rewards = {
-    [1] = {full = {money = {2000, 2500, 3000}, items = {"weapon_combatpistol", "pistol_ammo"}}, penalty = {money = {1000, 1250, 1500}}},
-    [2] = {full = {money = {1000, 1500, 2000}, items = {"pistol_ammo", "hak_kit"}}, penalty = {money = {500, 750, 950}}},
-    [3] = {money = {500, 750, 1000}} -- Tier 3 only has one set of rewards, no penalty.
+    [1] = {
+        full = {
+            money = {2000, 2500, 3000},
+            items = {'weapon_combatpistol', 'pistol_ammo'}
+        },
+        penalty = {
+            money = {1000, 1250, 1500}
+        }
+    },
+    [2] = {
+        full = {
+            money = {1000, 1500, 2000},
+            items = {'pistol_ammo', 'hak_kit'}
+        },
+        penalty = {
+            money = {500, 750, 950}
+        }
+    },
+    [3] = {
+        money = {500, 750, 1000}
+    }
 }
 
 -- Locations
 Config.PedLocation = {x = 1129.99, y = -989.16, z = 45.97, heading = 96.08}
-Config.DropOffLocation = vector3(1119.01, -992.14, 46.01)
 
 Config.SpawnLocations = {
     vector3(-2480.9, -212.0, 17.4),
@@ -60,6 +83,10 @@ Config.SpawnLocations = {
     vector3(-521.9, -266.8, 34.9),
     vector3(-451.1, -333.5, 34.0),
     vector3(322.4, -1900.5, 25.8)
+}
+
+Config.DropOffLocations = {
+    {x= 56.82, y = 160.78, z = 104.73, heading = 250.3, label = "Location"}
 }
 
 Config.PedBlip = {
