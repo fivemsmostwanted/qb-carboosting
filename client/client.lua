@@ -254,7 +254,7 @@ end)
 RegisterNetEvent('qb-carboosting:client:completeOrder', function()
     if boosting and not inTargetCar and IsVehicleNearPed(dropOffLocation, 10.0) then
         if currentTier < 3 and trackerActive then
-            QBCore.Functions.Notify("You trying to put the cops on me bro? Get the tracker off that thing and come back.", 'error')
+            QBCore.Functions.Notify("You trying to get the feds on me? Get the tracker off that thing and come back.", 'error')
             return
         end
 
