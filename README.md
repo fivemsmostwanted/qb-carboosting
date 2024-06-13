@@ -35,8 +35,9 @@
 
 ## TO-DO
 - Implement a reputation system that will define the tier of vehicles the player gets.
-- Implement different drop-off locations for the cars
+- Implement different drop-off locations for the cars -- Done
 - Implement vinscratching as a process of the mission for tier 2 and above vehicles.
+- Implement Ped spawning on the runs (owners) which will force the player to kill them or be fast enough to run -- Working on
 
 ## Contributing
 Contributions are welcome! Please fork the repository and submit a pull request for any enhancements or bug fixes.
