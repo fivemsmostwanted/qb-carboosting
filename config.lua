@@ -1,47 +1,47 @@
 Config = {}
 
 -- Bools
-Config.Debug = false -- Debug this will increase the resource ms.
+Config.Debug = false                  -- Debug this will increase the resource ms.
 
-Config.Target = 'ox' -- can be 'ox' = ox_target / 'qb' = qb-target
+Config.Target = 'ox'                  -- can be 'ox' = ox_target / 'qb' = qb-target / 'interact' = interact
 
 Config.PedModel = 'a_m_m_bevhills_02' -- ped to interact with
-Config.CarSearchRadius = 100.0 -- Radius on map
-Config.Delay = 600 -- Delay in seconds
+Config.CarSearchRadius = 100.0        -- Radius on map
+Config.Delay = 600                    -- Delay in seconds
 
 Config.CarTiers = {
-    [1] = {'adder', 'zentorno', 't20'},
-    [2] = {'dominator', 'gauntlet', 'f620'},
-    [3] = {'panto', 'blista', 'dilettante'}
+    [1] = { 'adder', 'zentorno', 't20' },
+    [2] = { 'dominator', 'gauntlet', 'f620' },
+    [3] = { 'panto', 'blista', 'dilettante' }
 }
 
 -- Rewards
 Config.Rewards = {
     [1] = {
         full = {
-            money = {2000, 2500, 3000},
-            items = {'weapon_combatpistol', 'pistol_ammo'}
+            money = { 2000, 2500, 3000 },
+            items = { 'weapon_combatpistol', 'pistol_ammo' }
         },
         penalty = {
-            money = {1000, 1250, 1500}
+            money = { 1000, 1250, 1500 }
         }
     },
     [2] = {
         full = {
-            money = {1000, 1500, 2000},
-            items = {'pistol_ammo', 'hak_kit'}
+            money = { 1000, 1500, 2000 },
+            items = { 'pistol_ammo', 'hak_kit' }
         },
         penalty = {
-            money = {500, 750, 950}
+            money = { 500, 750, 950 }
         }
     },
     [3] = {
-        money = {500, 750, 1000}
+        money = { 500, 750, 1000 }
     }
 }
 
 -- Locations
-Config.PedLocation = {x = 1129.99, y = -989.16, z = 45.97, heading = 96.08}
+Config.PedLocation = { x = 1129.99, y = -989.16, z = 45.97, heading = 96.08 }
 
 Config.SpawnLocations = {
     vector3(-2480.9, -212.0, 17.4),
@@ -87,7 +87,7 @@ Config.SpawnLocations = {
 }
 
 Config.DropOffLocations = {
-    {x= 56.82, y = 160.78, z = 104.73, heading = 250.3, label = "Location"}
+    { x = 56.82, y = 160.78, z = 104.73, heading = 250.3, label = "Location" }
 }
 
 Config.PedBlip = {
@@ -102,4 +102,3 @@ Config.PoliceAlertChance = {
     [2] = 60, -- 60% chance of police alert for Tier 2
     [3] = 30  -- 30% chance of police alert for Tier 3
 }
-
