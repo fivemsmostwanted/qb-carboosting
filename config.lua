@@ -3,7 +3,8 @@ Config = {}
 -- Bools
 Config.Debug = false -- Debug this will increase the resource ms.
 
--- 
+Config.Target = 'ox' -- can be 'ox' = ox_target / 'qb' = qb-target
+
 Config.PedModel = 'a_m_m_bevhills_02' -- ped to interact with
 Config.CarSearchRadius = 100.0 -- Radius on map
 Config.Delay = 600 -- Delay in seconds

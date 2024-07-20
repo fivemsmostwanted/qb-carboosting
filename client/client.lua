@@ -20,30 +20,61 @@ local dropOffPed = nil
 local dropOffEmailSent = false
 local notificationShown = false
 
-Citizen.CreateThread(function()
+CreateThread(function()
     local pedModel = GetHashKey(Config.PedModel)
 
     RequestModel(pedModel)
     while not HasModelLoaded(pedModel) do
-        Citizen.Wait(1)
+        Wait(1)
     end
 
     local ped = CreatePed(4, pedModel, Config.PedLocation.x, Config.PedLocation.y, Config.PedLocation.z - 1.0, Config.PedLocation.heading, false, true)
     FreezeEntityPosition(ped, true)
     SetEntityInvincible(ped, true)
     SetBlockingOfNonTemporaryEvents(ped, true)
-
-    exports['qb-target']:AddTargetEntity(ped, {
-        options = {
+    if Config.Target == 'qb' then
+        exports['qb-target']:AddTargetEntity(ped, {
+            options = {
+                {
+                    type = "client",
+                    action = function(entity)
+                        if cooldown then
+                            TriggerEvent('qb-carboosting:client:suspiciousActivity')
+                        else
+                            TriggerEvent('qb-carboosting:client:startBoostingRequest')
+                        end
+                    end,
+                    icon = "fas fa-car",
+                    label = 'Vehicle Order',
+                    canInteract = function()
+                        return not boosting
+                    end
+                },
+                {
+                    type = "client",
+                    action = function()
+                        TriggerEvent('qb-carboosting:client:stopBoosting')
+                    end,
+                    icon = "fas fa-times",
+                    label = 'Cancel Order',
+                    canInteract = function()
+                        return boosting
+                    end
+                }
+            },
+            distance = 2.5,
+        })
+    elseif Config.Target == 'ox' then
+        exports.ox_target:addLocalEntity(ped, {
             {
-                type = "client",
-                action = function(entity)
+                onSelect = function(entity)
                     if cooldown then
                         TriggerEvent('qb-carboosting:client:suspiciousActivity')
                     else
                         TriggerEvent('qb-carboosting:client:startBoostingRequest')
                     end
                 end,
+                distance = 2.5,
                 icon = "fas fa-car",
                 label = 'Vehicle Order',
                 canInteract = function()
@@ -51,19 +82,18 @@ Citizen.CreateThread(function()
                 end
             },
             {
-                type = "client",
-                action = function()
+                onSelect = function()
                     TriggerEvent('qb-carboosting:client:stopBoosting')
                 end,
+                distance = 2.5,
                 icon = "fas fa-times",
                 label = 'Cancel Order',
                 canInteract = function()
                     return boosting
                 end
             }
-        },
-        distance = 2.5,
-    })
+        })
+    end
 
     -- Create a blip for the ped location
     local blip = AddBlipForCoord(Config.PedLocation.x, Config.PedLocation.y, Config.PedLocation.z)
@@ -170,7 +200,7 @@ RegisterNetEvent('qb-carboosting:client:startBoosting', function()
         local vehicleHash = GetHashKey(targetCar)
         RequestModel(vehicleHash)
         while not HasModelLoaded(vehicleHash) do
-            Citizen.Wait(1)
+            Wait(1)
         end
 
         spawnedCar = CreateVehicle(vehicleHash, carLocation.x, carLocation.y, carLocation.z, 0.0, true, false)
@@ -224,30 +254,45 @@ RegisterNetEvent('qb-carboosting:client:acceptDropOff', function()
     local pedModel = GetHashKey(Config.PedModel)
     RequestModel(pedModel)
     while not HasModelLoaded(pedModel) do
-        Citizen.Wait(1)
+        Wait(1)
     end
 
     dropOffPed = CreatePed(4, pedModel, dropOffLocation.x, dropOffLocation.y, dropOffLocation.z - 1.0, dropOffLocation.heading, false, true)
     FreezeEntityPosition(dropOffPed, true)
     SetEntityInvincible(dropOffPed, true)
     SetBlockingOfNonTemporaryEvents(dropOffPed, true)
-
-    exports['qb-target']:AddTargetEntity(dropOffPed, {
-        options = {
+    if Config.Target == 'qb' then
+        exports['qb-target']:AddTargetEntity(dropOffPed, {
+            options = {
+                {
+                    type = "client",
+                    action = function()
+                        TriggerEvent('qb-carboosting:client:completeOrder')
+                    end,
+                    icon = "fas fa-check",
+                    label = 'Complete Delivery',
+                    canInteract = function()
+                        return boosting and not inTargetCar and IsVehicleNearPed(dropOffLocation, 10.0)
+                    end
+                },
+            },
+            distance = 2.5,
+        })
+    elseif Config.Target == 'ox' then
+        exports.ox_target:addLocalEntity(dropOffPed, {
             {
-                type = "client",
-                action = function()
+                onSelect = function()
                     TriggerEvent('qb-carboosting:client:completeOrder')
                 end,
                 icon = "fas fa-check",
                 label = 'Complete Delivery',
                 canInteract = function()
                     return boosting and not inTargetCar and IsVehicleNearPed(dropOffLocation, 10.0)
-                end
+                end,
+                distance = 2.0
             },
-        },
-        distance = 2.5,
-    })
+        })
+    end
 end)
 
 -- Event to complete the order
@@ -274,7 +319,7 @@ RegisterNetEvent('qb-carboosting:client:completeOrder', function()
         cooldown = true
         cooldownEndTime = GetGameTimer() + (Config.Delay * 1000)
         LayLowEmail('The cops are still looking for you. Lay low for ' .. Config.Delay .. ' seconds.')
-        Citizen.SetTimeout(Config.Delay * 1000, function()
+        SetTimeout(Config.Delay * 1000, function()
             cooldown = false
         end)
     else
@@ -283,9 +328,9 @@ RegisterNetEvent('qb-carboosting:client:completeOrder', function()
 end)
 
 -- Main loop to check boosting progress
-Citizen.CreateThread(function()
+CreateThread(function()
     while true do
-        Citizen.Wait(0)
+        Wait(0)
         if boosting and targetCar then
             local playerPed = PlayerPedId()
 
@@ -346,9 +391,9 @@ function DrawDebugInfo()
 end
 
 -- Update police about car location every 30 seconds if tracker is active
-Citizen.CreateThread(function()
+CreateThread(function()
     while true do
-        Citizen.Wait(30000) -- 30 seconds
+        Wait(30000) -- 30 seconds
         if boosting and inTargetCar and trackerActive then
             local playerPed = PlayerPedId()
             local vehicle = GetVehiclePedIsIn(playerPed, false)
