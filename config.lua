@@ -4,6 +4,7 @@ Config = {}
 Config.Debug = false -- Debug this will increase the resource ms.
 
 Config.Target = 'ox' -- can be 'ox' = ox_target / 'qb' = qb-target
+Config.PhoneScript = 'none' -- Options: qb-phone, gksphone
 
 Config.PedModel = 'a_m_m_bevhills_02' -- ped to interact with
 Config.CarSearchRadius = 100.0 -- Radius on map

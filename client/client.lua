@@ -117,30 +117,64 @@ function IsVehicleNearPed(location, radius)
 end
 
 function JobEmail(msg, event)
-    local phoneNr = 'Car Thief'
-    PlaySoundFrontend(-1, "Menu_Accept", "Phone_SoundSet_Default", true)
-    TriggerServerEvent('qb-phone:server:sendNewMail', {
-        sender = phoneNr,
-        subject = "Details",
-        message = msg,
-        button = {
-            enabled = true,
-            buttonEvent = event
+    if Config.PhoneScript == 'qb-phone' then
+        local phoneNr = 'Car Thief'
+        PlaySoundFrontend(-1, "Menu_Accept", "Phone_SoundSet_Default", true)
+        TriggerServerEvent('qb-phone:server:sendNewMail', {
+            sender = phoneNr,
+            subject = "Details",
+            message = msg,
+            button = {
+                enabled = true,
+                buttonEvent = event
+            }
+        })
+    elseif 
+    Config.PhoneScript == 'gksphone' then
+        local MailData = {
+            sender = 'Car Thief',
+            image = '/html/static/img/icons/mail.png', -- Added this line to include the image field
+            subject = "Details",
+            message = msg,
+            button = {
+                buttonEvent = event,
+                buttonData = "", -- You can modify this if you have specific button data to send
+                buttonname = "Details" -- You can modify this if you have a specific button name
+            }
         }
-    })
+        PlaySoundFrontend(-1, "Menu_Accept", "Phone_SoundSet_Default", true)
+        exports["gksphone"]:SendNewMail(MailData)
+    end
 end
 
 function LayLowEmail(msg)
-    local phoneNr = 'Car Thief'
-    PlaySoundFrontend(-1, "Menu_Accept", "Phone_SoundSet_Default", true)
-    TriggerServerEvent('qb-phone:server:sendNewMail', {
-        sender = phoneNr,
-        subject = "Lay Low",
-        message = msg,
-        button = {
-            enabled = false
+    if Config.PhoneScript == 'qb-phone' then
+        local phoneNr = 'Car Thief'
+        PlaySoundFrontend(-1, "Menu_Accept", "Phone_SoundSet_Default", true)
+        TriggerServerEvent('qb-phone:server:sendNewMail', {
+            sender = phoneNr,
+            subject = "Lay Low",
+            message = msg,
+            button = {
+                enabled = false
+            }
+        })
+    elseif 
+    Config.PhoneScript == 'gksphone' then
+        local MailData = {
+            sender = 'Car Thief',
+            image = '/html/static/img/icons/mail.png', -- Added this line to include the image field
+            subject = "Lay Low",
+            message = msg,
+            button = {
+                buttonEvent = "", -- No event since the button is not enabled
+                buttonData = "",  -- No data since the button is not enabled
+                buttonname = ""   -- No name since the button is not enabled
+            }
         }
-    })
+        PlaySoundFrontend(-1, "Menu_Accept", "Phone_SoundSet_Default", true)
+        exports["gksphone"]:SendNewMail(MailData)
+    end
 end
 
 -- Event to request boosting
